@@ -1,26 +1,32 @@
 class Observer {
-  constructor(handlers) {
+  isUnsubscribed: boolean;
+  handlers: ObserverHandlers;
+  _unsubscribe: UnsubscribeFunction;
+
+  constructor(handlers: ObserverHandlers) {
     this.handlers = handlers;
     this.isUnsubscribed = false;
   }
 
-  next(value) {
+  next: NextHandler = (value) => {
     if (this.handlers.next && !this.isUnsubscribed) {
-      this.handlers.next(value);
+      return this.handlers.next(value);
     }
+    return {status: 0}
   }
 
-  error(error) {
+  error: ErrorHandler = (error) => {
     if (!this.isUnsubscribed) {
       if (this.handlers.error) {
-        this.handlers.error(error);
+        return this.handlers.error(error);
       }
 
       this.unsubscribe();
     }
+    return {status: 0}
   }
 
-  complete() {
+  complete: CompleteHandler = () => {
     if (!this.isUnsubscribed) {
       if (this.handlers.complete) {
         this.handlers.complete();
@@ -30,7 +36,7 @@ class Observer {
     }
   }
 
-  unsubscribe() {
+  unsubscribe: UnsubscribeFunction = () => {
     this.isUnsubscribed = true;
 
     if (this._unsubscribe) {
@@ -40,12 +46,14 @@ class Observer {
 }
 
 class Observable {
-  constructor(subscribe) {
+  _subscribe: SubscribeFunction;
+
+  constructor(subscribe: SubscribeFunction) {
     this._subscribe = subscribe;
   }
 
-  static from(values) {
-    return new Observable((observer) => {
+  static from(values: RequestObject[]) {
+    return new Observable((observer: Observer) => {
       values.forEach((value) => observer.next(value));
 
       observer.complete();
@@ -56,7 +64,7 @@ class Observable {
     });
   }
 
-  subscribe(obs) {
+  subscribe(obs: ObserverHandlers) {
     const observer = new Observer(obs);
 
     observer._unsubscribe = this._subscribe(observer);
@@ -69,14 +77,7 @@ class Observable {
   }
 }
 
-const HTTP_POST_METHOD = 'POST';
-const HTTP_GET_METHOD = 'GET';
-
-const HTTP_STATUS_OK = 200;
-const HTTP_STATUS_INTERNAL_SERVER_ERROR = 500;
-
-
-const userMock = {
+const userMock: User = {
   name: 'User Name',
   age: 26,
   roles: [
@@ -87,7 +88,7 @@ const userMock = {
   isDeleated: false,
 };
 
-const requestsMock = [
+const requestsMock: RequestObject[] = [
   {
     method: HTTP_POST_METHOD,
     host: 'service.example',
@@ -105,16 +106,16 @@ const requestsMock = [
   }
 ];
 
-const handleRequest = (request) => {
+const handleRequest: NextHandler = (request) => {
   // handling of request
   return {status: HTTP_STATUS_OK};
 };
-const handleError = (error) => {
+const handleError: ErrorHandler = (error) => {
   // handling of error
   return {status: HTTP_STATUS_INTERNAL_SERVER_ERROR};
 };
 
-const handleComplete = () => console.log('complete');
+const handleComplete: CompleteHandler = () => console.log('complete');
 
 const requests$ = Observable.from(requestsMock);
 
